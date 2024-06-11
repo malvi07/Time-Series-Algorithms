@@ -13,7 +13,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 #Reading CSV data and storing it in a dataframe
-df = pd.read_csv('T1.csv')
+df = pd.read_csv('Kaggle-Dataset-Wind-Turbine-Scada-Dataset.csv')
 df.head()
 
 #Checking column names and if there are any NAN rows.
