@@ -17,7 +17,7 @@ This project utilizes two primary datasets:
 
 ### Benchmark Metrics ("Numbers to Beat")
 Will compare the algorithms against established benchmarks in the field of time series forecasting.
-Below are the key performance metrics from studies on the Wind Turbine Scada Dataset:[here](https://www.kaggle.com/datasets/berkerisen/wind-turbine-scada-dataset/code).
+Below are the key performance metrics from studies on the Wind Turbine Scada Dataset [here](https://www.kaggle.com/datasets/berkerisen/wind-turbine-scada-dataset/code) : 
 
 1. Wind Turbine EDA and Modeling 0.986 R2 - Youssif Shaaban Qzamel
    * RMSE (Root Mean Square Error): 149.06
