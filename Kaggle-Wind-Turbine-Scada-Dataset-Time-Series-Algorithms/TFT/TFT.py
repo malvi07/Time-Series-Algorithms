@@ -47,7 +47,7 @@ end_valid = end_train + int(validation_ratio * total_rows)
 train_df = df.iloc[:end_train]
 valid_df = df.iloc[end_train:end_valid]
 test_df = df.iloc[end_valid:]
-len(train_df), len(valid_df), len(test_df)
+print(len(train_df), len(valid_df), len(test_df))
 
 #Creating a training, validation, and test dataset. 
 training = TimeSeriesDataSet(data=train_df,
