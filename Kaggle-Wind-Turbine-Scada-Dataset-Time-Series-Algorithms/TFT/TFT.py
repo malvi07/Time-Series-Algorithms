@@ -24,7 +24,7 @@ df.isna().any(axis=1).sum()
 
 #Changing format of the 'Date/Time' colmn
 df['Date/Time'] = pd.to_datetime(df['Date/Time'], format='%d %m %Y %H:%M')
-#Setting the index to the date/time column
+#Setting the index to the date/time column. Changing the current dataframe
 df.set_index('Date/Time', inplace=True)
 
 #Creating different columns for the month,day,hour - For seasonality
