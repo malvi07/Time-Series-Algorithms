@@ -93,7 +93,7 @@ base_preds = baseline_forecase(train_df, test_df, 'LV ActivePower (kW)')
 #Making Predictions using baseline model
 actuals = test_df['LV ActivePower (kW)'].values
 
-# Calculate evaluation metrics
+#Using MAE, RMSE, and MAPE.
 mae_baseline = mean_absolute_error(actuals, base_preds)
 rmse_baseline = np.sqrt(mean_squared_error(actuals, base_preds))
 
