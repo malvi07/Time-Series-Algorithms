@@ -16,9 +16,10 @@ warnings.filterwarnings('ignore')
 df = pd.read_csv('Kaggle-Dataset-Wind-Turbine-Scada-Dataset.csv')
 df.head()
 
-#Checking column names and if there are any NAN rows.
+#Checking column names and shape.
 df.columns
 df.shape
+#Checking if there are any rows with any NAN values.
 df.isna().any(axis=1).sum()
 
 #Changing format of the 'Date/Time' colmn
