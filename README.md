@@ -17,3 +17,20 @@ This project utilizes two primary datasets:
 
 ### Benchmark Metrics ("Numbers to Beat")
 Will compare the algorithms against established benchmarks in the field of time series forecasting.
+Below are the key performance metrics from studies on the Wind Turbine Scada Dataset:m[here](https://www.kaggle.com/datasets/berkerisen/wind-turbine-scada-dataset/code).
+
+1. Wind Turbine EDA and Modeling 0.986 R2 - Youssif Shaaban Qzamel
+   * RMSE (Root Mean Square Error): 149.06
+   * R² (Coefficient of Determination): 0.986
+   * More details can be found [here](https://www.kaggle.com/code/youssifshaabanqzamel/wind-turbine-eda-and-modeling-0-986-r2)
+
+2. Wind Turbine Modeling R2 0.98 - Ahmad Alghali
+   * MAE (Mean Absolute Error): 71.696
+   * R² (Coefficient of Determination): 0.982
+   * More details can be found [here](https://www.kaggle.com/code/ahmadalghali/wind-turbine-modeling-r2-0-98)
+
+3. Wind Turbine Power Prediction-GBTRegressor PySpark - Melih Akdag
+   * R² (Coefficient of Determination): 0.981
+   * MAE (Mean Absolute Error): 83.679
+   * RMSE (Root Mean Square Error): 179.19
+   * More details can be found [here](https://www.kaggle.com/code/akdagmelih/wind-turbine-power-prediction-gbtregressor-pyspark)
