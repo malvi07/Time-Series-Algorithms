@@ -39,3 +39,17 @@ Below are the key performance metrics from studies on the Wind Turbine Scada Dat
 
 Below are the key performance metrics from studies on the Wind Turbine Scada Dataset [here](https://www.kaggle.com/datasets/theforcecoder/wind-power-forecasting) : 
 
+1. easy-Wind-power-forecasting - Paridhi Modi
+   * MAPE (Mean Absolute Percentage Error): 0.0261
+   * RMSE (Root Mean Square Error): 11.626
+   * MAE (Mean Absolute Error): 10.543
+   * More details can be found [here](https://www.kaggle.com/code/paridhimodi/easy-wind-power-forecasting)
+
+2. Wind Turbine-SARIMA, XGBoost, RandomForest & LSTM - CHRISMAT_10
+   * RandomForestRegressor:
+     * R² (Coefficient of Determination): 0.915
+     * RMSE (Root Mean Square Error): 40.54
+     * MAE (Mean Absolute Error): 50.99
+     * MAPE (Mean Absolute Percentage Error): 0.064
+     * More details can be found [here](https://www.kaggle.com/code/chrismat10/wind-turbine-sarima-xgboost-randomforest-lstm#Results-and-discussion)
+
