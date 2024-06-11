@@ -1,4 +1,4 @@
-# Time-Series-Algorithms
+# Time-Series-Algorithms-Wind-Power-Forecasting
 
 ### Introduction
 This project is about comparing different advanced algorithms used for predicting future values in time series data.
