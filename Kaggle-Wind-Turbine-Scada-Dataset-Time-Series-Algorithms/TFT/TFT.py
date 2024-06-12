@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
 from pytorch_forecasting.data import GroupNormalizer
 from pytorch_forecasting.metrics import QuantileLoss
-from pytorch_lightning import Trainer
+from lightning.pytorch import Trainer
 import warnings
 warnings.filterwarnings('ignore')
 
