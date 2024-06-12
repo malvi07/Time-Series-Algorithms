@@ -2,7 +2,6 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 import pytorch_lightning as pl
 from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
