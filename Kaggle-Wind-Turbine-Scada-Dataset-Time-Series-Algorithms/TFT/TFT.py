@@ -26,6 +26,18 @@ df['Date/Time'] = pd.to_datetime(df['Date/Time'], format='%d %m %Y %H:%M')
 #Setting the index to the date/time column. Changing the current dataframe
 df.set_index('Date/Time', inplace=True)
 
+#Replace negative values and 0 values with the median value of the column.
+median_active_power = df['LV ActivePower (kW)'].median()
+df['LV ActivePower (kW)'] = df['LV ActivePower (kW)'].replace(0, median_active_power)
+df['LV ActivePower (kW)'] = df['LV ActivePower (kW)'].apply(lambda x: median_active_power if x < 0 else x)
+
+#Normalizing power column
+from sklearn.preprocessing import MinMaxScaler
+column_to_normalize = ["LV ActivePower (kW)"]
+scaler = MinMaxScaler()
+df[column_to_normalize] = scaler.fit_transform(df[column_to_normalize])
+
+
 #Creating different columns for the month,day,hour - For seasonality
 #Created a time_idx - Incremented by 1 for each time step
 df['time_idx'] = range(len(df))
