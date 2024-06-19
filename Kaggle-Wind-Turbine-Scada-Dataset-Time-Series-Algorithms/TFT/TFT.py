@@ -40,12 +40,12 @@ df['Date/Time'] = pd.to_datetime(df['Date/Time'], format='%d %m %Y %H:%M')
 #Making the index of the dataset the 'Date/Time' column
 df.set_index('Date/Time', inplace=True)
 
-#Convertint the dataframe into a TimeSeries
+#Converting the dataframe into a TimeSeries
 series = TimeSeries.from_dataframe(df,fill_missing_dates=True, freq='10T')
 
-# Splitting data into train, validation, and test series using time.
+# Splitting data into train, validation, and test series.
 train_series, remainder = series.split_before(0.70)
-valid_series, test_series = remainder.split_before(0.85)  # Adjusted to 0.85 because it's relative to the start of the remainder
+valid_series, test_series = remainder.split_before(0.85)
 
 # Verify the lengths of the splits
 print(f"Train length: {len(train_series)}")
