@@ -130,35 +130,41 @@ model.fit(
 
 
 #Testing on the validation dataset
-all_predictions = []
+#Creating a list where all my predictions will be stored
+valid_all_predictions = []
 
+#Get the time index from the val_filled TimeSeries Object.
 timestamps = val_filled.time_index
 
+#Looping through - Generating predictions in chunks
 for i in range(0, len(val_filled) - model.input_chunk_length, model.output_chunk_length):
     start_ts = timestamps[i]
     end_ts = timestamps[i + model.input_chunk_length - 1]
-    
+
+    #Inputs I have to pass in the model when using .predict()
     past_covariates_slice = covariates_transformed.slice(start_ts, end_ts)
     val_filled_slice = val_filled.slice(start_ts, end_ts)
-    
-    pred = model.predict(n=model.output_chunk_length, series=val_filled_slice, past_covariates=past_covariates_slice)
-    
-    all_predictions.append(pred)
 
-all_predictions = concatenate(all_predictions)
+    #Making a prediction
+    pred = model.predict(n=model.output_chunk_length, series=val_filled_slice, past_covariates=past_covariates_slice)
+
+    #Appenind the prediction to the list
+    valid_all_predictions.append(pred)
+
+valid_all_predictions = concatenate(valid_all_predictions)
 
 aligned_predicted_lv_activepower = all_predictions.slice_intersect(val_filled)
 
+#Retrieving actual values and predicted values
 actual_lv_activepower = val_filled['LV ActivePower (kW)']
 predicted_lv_activepower = aligned_predicted_lv_activepower['LV ActivePower (kW)']
 
+#Running loss functions
 validation_mae = mae(actual_lv_activepower, predicted_lv_activepower)
 validation_rmse = rmse(actual_lv_activepower, predicted_lv_activepower)
 
 print(f"Validation MAE: {validation_mae}")
 print(f"Validation RMSE: {validation_rmse}")
-
-
 
 
 
@@ -175,6 +181,8 @@ plt.xlabel('Time')
 plt.ylabel('LV ActivePower (kW)')
 plt.grid(True)
 plt.show()
+
+
 
 #Making predictions on the test dataset
 test_transformed = transformer.transform(test_series)
