@@ -1,254 +1,105 @@
-import numpy as np 
-import pandas as pd
-import matplotlib.pyplot as plt
-import torch
-import torch.nn as nn
-
-from darts import TimeSeries, concatenate
-from darts.dataprocessing.transformers import Scaler
-from darts.models import TFTModel
-from darts.metrics import mape
-from darts.metrics import mae, rmse
-from darts.utils.statistics import check_seasonality, plot_acf
-from darts.datasets import AirPassengersDataset, IceCreamHeaterDataset
-from darts.utils.timeseries_generation import datetime_attribute_timeseries
-from darts.utils.likelihood_models import QuantileRegression
-
-import warnings
-warnings.filterwarnings("ignore")
-
-import logging
-logging.disable(logging.CRITICAL)
-
-#Inspecting dataset
-df=pd.read_csv('/kaggle/input/wind-turbine-scada-dataset/T1.csv')
-df.columns
-
-#Count of 0 values
-zero_count = (df['LV ActivePower (kW)'] == 0).sum()
-# Count of negative values
-negative_count = (df['LV ActivePower (kW)'] < 0).sum()
-print(zero_count, negative_count)
-
-# Calculate the mean of the positive values in the column
-mean_value = df[df['LV ActivePower (kW)'] > 0]['LV ActivePower (kW)'].mean()
-# Replace negative values with the mean
-df.loc[df['LV ActivePower (kW)'] < 0, 'LV ActivePower (kW)'] = mean_value
+df = pd.read_csv('./wind-turbine-scada-dataset/T1.csv')
+from utils import *
 
 #Changing format of the 'Date/Time' colmn
 df['Date/Time'] = pd.to_datetime(df['Date/Time'], format='%d %m %Y %H:%M')
-#Making the index of the dataset the 'Date/Time' column
+
+#Setting index as the date/time column. Changing df type to float32
 df.set_index('Date/Time', inplace=True)
+df = df.astype(np.float32)
 
-#Converting the dataframe into a TimeSeries
-series = TimeSeries.from_dataframe(df,fill_missing_dates=True, freq='10T')
+#Creating a dataframe to store columns that contain information about weather
+weather_df = df[['Wind Speed (m/s)', 'Wind Direction (°)' ]].copy()
+#Creating a dataframe. Gets the hourly mean for data that is related to weather.
+weather_hourly_df = weather_df.resample('H').mean()
 
-# Splitting data into train, validation, and test series.
-train_series, remainder = series.split_before(0.70)
-valid_series, test_series = remainder.split_before(0.85)
+#Creating a dataframe that stores the target variable (Active Power)
+wind_power_df = df[['LV ActivePower (kW)']].copy()
+#Creating a dataframe. Gets the hourly mean for power.
+wind_power_hourly_df = wind_power_df.resample('H').mean()
 
-# Verify the lengths of the splits
-print(f"Train length: {len(train_series)}")
-print(f"Validation length: {len(valid_series)}")
-print(f"Test length: {len(test_series)}")
-print(f'Series length: {len(series)}')
+#Creating a start index and stop index. 
+min_timestamp = wind_power_df.index.min()
+max_timestamp = wind_power_df.index.max()
+print (f"min timestamp is {min_timestamp} max timestamp is {max_timestamp}")
 
-#Normalize the time series.
-transformer = Scaler()
-train_transformed = transformer.fit_transform(train_series)
-val_transformed = transformer.transform(valid_series)
-series_transformed = transformer.transform(series)
+# Plot the values
+plt.figure(figsize=(16, 6))
+min_timestamp = wind_power_df.index.min()
+max_timestamp = wind_power_df.index.max()
+print (min_timestamp, max_timestamp)
+temp_df = wind_power_df.loc[min_timestamp: max_timestamp]
+plt.plot(temp_df.index, temp_df['LV ActivePower (kW)'], label='Actual wind power')
 
-# create year, month and integer index covariate series
-covariates = datetime_attribute_timeseries(series, attribute="year", one_hot=False)
-covariates = covariates.stack(
-    datetime_attribute_timeseries(series, attribute="month", one_hot=False)
-)
-covariates = covariates.stack(
-    TimeSeries.from_times_and_values(
-        times=series.time_index,
-        values=np.arange(len(series)),
-        columns=["linear_increase"],
-    )
-)
-covariates = covariates.astype(np.float32)
-
-# transform covariates
-total_rows = len(series)
-train_ratio = 0.70
-end_train = int(train_ratio * total_rows)
-validation_ratio = 0.15
-end_valid = end_train + int(validation_ratio * total_rows)
-cov_train, remainder_cov = covariates.split_before(end_train)
-cov_valid, cov_test = remainder_cov.split_before(end_valid - end_train)
-scaler_covs = Scaler()
-scaler_covs.fit(cov_train)
-covariates_transformed = scaler_covs.transform(covariates)
-
-
-# Check NaN values in the transformed training, validation, and covariates series
-print("Training NaN count:", train_transformed.pd_dataframe().isna().sum().sum())
-print("Validation NaN count:", val_transformed.pd_dataframe().isna().sum().sum())
-print("Covariates NaN count:", covariates_transformed.pd_dataframe().isna().sum().sum())
-
-# Check which columns have NaN values
-train_nan_columns = train_transformed.pd_dataframe().isna().sum()
-val_nan_columns = val_transformed.pd_dataframe().isna().sum()
-print("NaN counts in training columns:", train_nan_columns)
-print("NaN counts in validation columns:", val_nan_columns)
-
-# Apply forward fill
-train_filled = train_transformed.pd_dataframe().fillna(method='ffill').pipe(TimeSeries.from_dataframe)
-val_filled = val_transformed.pd_dataframe().fillna(method='ffill').pipe(TimeSeries.from_dataframe)
-
-
-#Creating the TFT Model
-model = TFTModel(
-    input_chunk_length=168,
-    output_chunk_length=24,
-    hidden_size=32,
-    lstm_layers=2,
-    dropout=0.1,
-    loss_fn=torch.nn.MSELoss(),
-    optimizer_cls=torch.optim.Adam,
-    optimizer_kwargs={'lr':0.001},
-    batch_size=32,
-    n_epochs=10,
-    log_tensorboard=True,
-    num_attention_heads=4,
-    model_name='WindPower_TFT_baseline',
-    add_relative_index=True
-)
-
-#Training the model
-model.fit(
-    series=train_filled, 
-    past_covariates=covariates_transformed,
-    val_series=val_filled, 
-    val_past_covariates=covariates_transformed
-)
-
-
-#Testing on the validation dataset
-#Creating a list where all my predictions will be stored
-valid_all_predictions = []
-
-#Get the time index from the val_filled TimeSeries Object.
-timestamps = val_filled.time_index
-
-#Looping through - Generating predictions in chunks
-for i in range(0, len(val_filled) - model.input_chunk_length, model.output_chunk_length):
-    start_ts = timestamps[i]
-    end_ts = timestamps[i + model.input_chunk_length - 1]
-
-    #Inputs I have to pass in the model when using .predict()
-    past_covariates_slice = covariates_transformed.slice(start_ts, end_ts)
-    val_filled_slice = val_filled.slice(start_ts, end_ts)
-
-    #Making a prediction
-    pred = model.predict(n=model.output_chunk_length, series=val_filled_slice, past_covariates=past_covariates_slice)
-
-    #Appenind the prediction to the list
-    valid_all_predictions.append(pred)
-
-valid_all_predictions = concatenate(valid_all_predictions)
-
-aligned_predicted_lv_activepower = all_predictions.slice_intersect(val_filled)
-
-#Retrieving actual values and predicted values
-actual_lv_activepower = val_filled['LV ActivePower (kW)']
-predicted_lv_activepower = aligned_predicted_lv_activepower['LV ActivePower (kW)']
-
-#Running loss functions
-validation_mae = mae(actual_lv_activepower, predicted_lv_activepower)
-validation_rmse = rmse(actual_lv_activepower, predicted_lv_activepower)
-
-print(f"Validation MAE: {validation_mae}")
-print(f"Validation RMSE: {validation_rmse}")
-
-
-
-
-# Plot actual vs predicted LV ActivePower (kW)
-plt.figure(figsize=(12, 6))
-
-actual_lv_activepower.plot(label='Actual LV ActivePower (kW)', lw=2, color='blue', alpha=0.6)
-predicted_lv_activepower.plot(label='Predicted LV ActivePower (kW)', lw=2, color='red', alpha=0.6)
-
+# Customize the plot
+plt.xlabel('Timestamp')
+plt.ylabel('Wind power')
+plt.title(f'Actual wind power between {min_timestamp} and {max_timestamp}')
 plt.legend()
-plt.title('Actual vs Predicted LV ActivePower (kW)')
-plt.xlabel('Time')
-plt.ylabel('LV ActivePower (kW)')
 plt.grid(True)
+plt.xticks(rotation=75)
+
+# Show plot
 plt.show()
 
+#Resetting the index and changing column names for the wind_power_hourly dataframe.
+wind_power_hourly_df = wind_power_hourly_df.reset_index()
+wind_power_hourly_df = wind_power_hourly_df.rename(columns={'Date/Time': 'time'})
+wind_power_hourly_df = wind_power_hourly_df.rename(columns={'LV ActivePower (kW)': 'value_avbl'})
+
+#Resetting the index and changing column names for the weather_hourly dataframe.
+weather_hourly_df = weather_hourly_df.reset_index()
+weather_hourly_df = weather_hourly_df.rename(columns={'Date/Time':'time'})
+weather_hourly_df = weather_hourly_df.rename(columns={'Wind Speed (m/s)':'wind_speed_10m', 'Wind Direction (°)':'wind_direction_10m' })
 
 
-#Making predictions on the test dataset
-test_transformed = transformer.transform(test_series)
+#Passing in data into function --> preprocess_data. Returns:
+'''
+1. TimeSeries Training List
+2. TimeSeries Validation List
+3. TimeSeries List
+4. Future Covariates List
+5. Past Covariates List
+'''
+ts_train_list, ts_val_list, ts_list, future_cov_list, past_cov_list = preprocess_data(wind_power_hourly_df,weather_hourly_df, training_split_date = '2018-06-01', val_split_date = '2018-07-01')
 
-test_covariates = datetime_attribute_timeseries(test_transformed, attribute="year", one_hot=False)
-test_covariates = test_covariates.stack(datetime_attribute_timeseries(test_transformed, attribute="month", one_hot=False))
-test_covariates = test_covariates.stack(
-    TimeSeries.from_times_and_values(
-        times=test_transformed.time_index,
-        values=np.arange(len(test_transformed)),
-        columns=["linear_increase"]
-    )
-)
+#Var for the number of epochs.
+NUM_EPOCHS = 15
+#Getting hyperparameters from the function get_args().
+args = get_args()
+# Training the TFT model and storing it in the var model
+model = train_TFT_model(args, ts_train_list, past_cov_list, future_cov_list, NUM_EPOCHS)
 
-test_filled = test_transformed.pd_dataframe().fillna(method='ffill').pipe(TimeSeries.from_dataframe)
-test_covariates_transformed = scaler_covs.transform(test_covariates)
+#Making predictions
+all_forecasts = predict_and_evaluate(model, ts_list, future_cov_list, past_cov_list, start_time = '2018-07-02 11:00:00' )
 
+#Renaming columns - Ease of use
+all_forecasts = all_forecasts.rename(columns={'value_avbl': 'TFT_value'})
+#Creating new column
+all_forecasts['lead_time'] = all_forecasts['time'] - all_forecasts['init_time']
 
+#Setting index of the dataframe to the 'time' column
+wind_power_hourly_df.set_index('time', inplace=True)
 
+#Setting index of the dataframe to the 'time' column
+all_forecasts.set_index('time', inplace=True)
 
-test_predictions = []
+#Implementing a left join merge.
+all_forecasts = pd.merge(all_forecasts, wind_power_hourly_df, on='time', how='left')
+day_ahead_forecasts = all_forecasts[all_forecasts['lead_time'].between(pd.Timedelta(hours=14), pd.Timedelta(days=1, hours=13))]
 
-test_timestamps = test_filled.time_index
+# This is for 173 days; so some duplicate times etc; we need to either consider the first and drop the repeat OR
+# We need to consider the average over all times 
+all_forecasts.shape[0]/240
+wind_power_hourly_df.shape
 
-for i in range(0, len(test_filled) - model.input_chunk_length, model.output_chunk_length):
-    start_ts = test_timestamps[i]
-    end_ts = test_timestamps[i + model.input_chunk_length - 1]
-    
-    test_past_covariates_slice = test_covariates_transformed.slice(start_ts, end_ts)
-    test_filled_slice = test_filled.slice(start_ts, end_ts)
-    
-    test_pred = model.predict(n=model.output_chunk_length, series=test_filled_slice, past_covariates=test_past_covariates_slice)
-    
-    test_predictions.append(test_pred)
+merged_df = day_ahead_forecasts.copy()
+print (merged_df.head())
 
-test_predictions = concatenate(test_predictions)
+# Identify rows with any NaN values
+nan_rows = merged_df[merged_df.isna().any(axis=1)]
 
-aligned_test_predicted_lv_activepower = test_predictions.slice_intersect(test_filled)
-
-actual_test_lv_activepower = test_filled['LV ActivePower (kW)']
-predicted_test_lv_activepower = aligned_test_predicted_lv_activepower['LV ActivePower (kW)']
-
-test_mae = mae(actual_test_lv_activepower, predicted_test_lv_activepower)
-test_rmse = rmse(actual_test_lv_activepower, predicted_test_lv_activepower)
-
-print(f"Test MAE: {test_mae}")
-print(f"Test RMSE: {test_rmse}")
-
-# Test MAE: 0.11803431203695597
-# Test RMSE: 0.17109489731409974
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+len(nan_rows)
+#Taking the average over all times and replacing rows that contain NAN values
+merged_df.fillna(merged_df.mean(), inplace=True)
 
